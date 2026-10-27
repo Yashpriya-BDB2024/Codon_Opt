@@ -30,70 +30,71 @@ INPUT_COL = "Generated DNA Sequence"
 SPECIES = "h_sapiens"
 
 # ----------------------------------------------------------------------------
-# Cutoffs taken from the part-2 report (what GeneArt sequences stayed within)
+# Cutoffs. "geneart" level = values read from the part-2 report.
+# "lenient" and "strict" are looser / tighter versions to see how cutoffs matter.
 # ----------------------------------------------------------------------------
-GC_50 = (50, 0.44, 0.68)      # (window, mini, maxi)  50-bp windows: 44-68 %
-GC_100 = (100, 0.49, 0.66)    # 100-bp windows: 49-66 %
-GC_TARGET = (50, 0.57)        # (window, target) - overall GeneArt GC is ~57 %
-HOMOPOLYMERS = ["6xA", "5xC", "5xG", "5xT"]    # runs longer than GeneArt's max
 MOTIFS = ["AWTAAA", "ATTTA", "TATAAA"]         # polyA signal (W = A/T), AU-rich, TATA
 SITES = ["BsaI", "BsmBI", "BbsI", "SapI", "EcoRI", "XhoI", "NotI",
          "XbaI", "SpeI", "KpnI", "SalI", "AscI", "PacI"]   # absent in GeneArt
-KMER = 10                     # no repeated 10-mers in GeneArt
-RARE = 0.11                   # lowest codon frequency GeneArt ever used
-RARE_STRICT = 0.15            # a stricter rare-codon cutoff to try
+GC_TARGET = (50, 0.57)        # (window, target) - overall GeneArt GC is ~57 %
+
+LEVELS = {
+    # looser than GeneArt
+    "lenient": {"gc": (50, 0.40, 0.72), "runs": ["7xA", "6xC", "6xG", "6xT"],
+                "kmer": 15, "rare": 0.05, "motifs": True, "sites": True},
+    # exactly what GeneArt stayed within (GC 44-68 %, max runs A5/C4/G4/T4,
+    # no repeated 10-mer, lowest codon frequency used = 0.11)
+    "geneart": {"gc": (50, 0.44, 0.68), "runs": ["6xA", "5xC", "5xG", "5xT"],
+                "kmer": 10, "rare": 0.11, "motifs": True, "sites": True},
+    # tighter than GeneArt (k=9 not tried: GeneArt itself repeats 9-mers)
+    "strict": {"gc": (50, 0.46, 0.66), "runs": ["5xA", "4xC", "4xG", "4xT"],
+               "kmer": 10, "rare": 0.15, "motifs": True, "sites": True},
+}
 
 # ----------------------------------------------------------------------------
-# The 10 variants. Every variant always has EnforceTranslation (protein must
-# not change) and one CodonOptimize objective. Other keys switch constraints on.
+# The 10 variants. EnforceTranslation is always on (protein must not change).
+# "codon" = CodonOptimize method (None = no CodonOptimize objective).
 # ----------------------------------------------------------------------------
 VARIANTS = {
-    # 1-2: codon strategy only (baselines)
-    "V01_best_codon": {"codon": "use_best_codon"},
-    "V02_match_usage": {"codon": "match_codon_usage"},
+    # 1-2: codon strategy only (baselines, no other constraints)
+    "V01_best_only": {"codon": "use_best_codon"},
+    "V02_match_only": {"codon": "match_codon_usage"},
 
-    # 3-4: + local GC window + homopolymer limits
-    "V03_best_GC_runs": {"codon": "use_best_codon", "gc": GC_50, "runs": True},
-    "V04_match_GC_runs": {"codon": "match_codon_usage", "gc": GC_50, "runs": True},
+    # 3-8: both codon strategies x three cutoff levels
+    "V03_best_lenient": {"codon": "use_best_codon", **LEVELS["lenient"]},
+    "V04_match_lenient": {"codon": "match_codon_usage", **LEVELS["lenient"]},
+    "V05_best_geneart": {"codon": "use_best_codon", **LEVELS["geneart"]},
+    "V06_match_geneart": {"codon": "match_codon_usage", **LEVELS["geneart"]},
+    "V07_best_strict": {"codon": "use_best_codon", **LEVELS["strict"]},
+    "V08_match_strict": {"codon": "match_codon_usage", **LEVELS["strict"]},
 
-    # 5-6: + unique 10-mers + rare codon cutoff
-    "V05_best_GC_runs_kmer_rare": {"codon": "use_best_codon", "gc": GC_50, "runs": True,
-                                   "kmer": KMER, "rare": RARE},
-    "V06_match_GC_runs_kmer_rare": {"codon": "match_codon_usage", "gc": GC_50, "runs": True,
-                                    "kmer": KMER, "rare": RARE},
-
-    # 7-8: everything (also unwanted motifs + restriction sites)
-    "V07_best_full": {"codon": "use_best_codon", "gc": GC_50, "runs": True, "kmer": KMER,
-                      "rare": RARE, "motifs": True, "sites": True},
-    "V08_match_full": {"codon": "match_codon_usage", "gc": GC_50, "runs": True, "kmer": KMER,
-                       "rare": RARE, "motifs": True, "sites": True},
-
-    # 9: stricter cutoffs (100-bp GC window, higher rare-codon cutoff)
-    "V09_best_full_strict": {"codon": "use_best_codon", "gc": GC_100, "runs": True,
-                             "kmer": KMER, "rare": RARE_STRICT, "motifs": True, "sites": True},
+    # 9: "light" optimization - only rare codons replaced, no CodonOptimize
+    "V09_light_geneart": {"codon": None, **LEVELS["geneart"]},
 
     # 10: GC as a soft objective (target) instead of a hard range
-    "V10_match_soft_GC": {"codon": "match_codon_usage", "runs": True, "motifs": True,
-                          "sites": True, "gc_target": GC_TARGET},
+    "V10_match_geneart_softGC": {"codon": "match_codon_usage",
+                                 **{**LEVELS["geneart"], "gc": None},
+                                 "gc_target": GC_TARGET},
 }
 
 
 def build_problem(sequence, cfg):
     """Turn one variant definition into a DnaOptimizationProblem."""
     constraints = [EnforceTranslation()]                       # protein stays identical
-    objectives = [CodonOptimize(species=SPECIES, method=cfg["codon"])]
+    objectives = []
+    if cfg.get("codon"):
+        objectives.append(CodonOptimize(species=SPECIES, method=cfg["codon"]))
 
-    if "gc" in cfg:                                            # hard GC range per window
+    if cfg.get("gc"):                                          # hard GC range per window
         window, low, high = cfg["gc"]
         constraints.append(EnforceGCContent(mini=low, maxi=high, window=window))
 
-    if cfg.get("runs"):                                        # homopolymer limits
-        constraints += [AvoidPattern(p) for p in HOMOPOLYMERS]
+    constraints += [AvoidPattern(p) for p in cfg.get("runs", [])]   # homopolymer limits
 
-    if "kmer" in cfg:                                          # no repeated k-mers
+    if cfg.get("kmer"):                                        # no repeated k-mers
         constraints.append(UniquifyAllKmers(cfg["kmer"]))
 
-    if "rare" in cfg:                                          # no rare human codons
+    if cfg.get("rare"):                                        # no rare human codons
         constraints.append(AvoidRareCodons(min_frequency=cfg["rare"], species=SPECIES))
 
     if cfg.get("motifs"):                                      # unwanted motifs
@@ -102,7 +103,7 @@ def build_problem(sequence, cfg):
     if cfg.get("sites"):                                       # restriction sites
         constraints += [AvoidPattern(f"{enzyme}_site") for enzyme in SITES]
 
-    if "gc_target" in cfg:                                     # soft GC objective
+    if cfg.get("gc_target"):                                   # soft GC objective
         window, target = cfg["gc_target"]
         objectives.append(EnforceGCContent(target=target, window=window))
 
