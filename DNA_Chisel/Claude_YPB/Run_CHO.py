@@ -1,5 +1,5 @@
 """
-run_cho_parallel.py  -  full CHO grid run, in parallel, with a progress bar.
+Run_CHO.py  -  full CHO grid run, in parallel, with a progress bar.
 
 Imports codon_grid_search.py (not modified). Reads the 80 CHO sequences from the
 trials workbook, runs all 2,592 cartesian variants for each, and writes ONE Excel.
