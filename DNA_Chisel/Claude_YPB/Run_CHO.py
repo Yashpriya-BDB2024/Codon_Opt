@@ -5,8 +5,8 @@ Imports codon_grid_search.py (not modified). Reads the 80 CHO sequences from the
 trials workbook, runs all 2,592 cartesian variants for each, and writes ONE Excel.
 
 Usage (from the DNAChisel folder):
-    python run_cho_parallel.py                        # full run
-    python run_cho_parallel.py --test                 # tiny test: 2 seqs x 17 variants
+    python Run_CHO.py                        # full run
+    python Run_CHO.py --test                 # tiny test: 2 seqs x 17 variants
 """
 
 import argparse
