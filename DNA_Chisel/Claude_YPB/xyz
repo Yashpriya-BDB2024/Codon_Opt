@@ -34,6 +34,7 @@ python -c "import pandas; print(pandas.__version__)"
 
 python - <<'PY'
 import pandas as pd
+import numpy as np
 import subprocess
 
 df = pd.read_excel("human_strictGC_top10.xlsx")
