@@ -1,1 +1,11 @@
 python3 -c "import pandas as pd; df=pd.read_excel('human_strictGC_top10.xlsx'); open('human_top10.fasta','w').write(''.join(f'>{r[\"Name\"]}_{r[\"Variant\"]}\n{r[\"Optimized DNA Sequence\"]}\n' for _,r in df.iterrows()))"
+
+mkdir -p results
+
+python3 codon_features.py \
+    --fasta human_top10.fasta \
+    --codon-table human_codon.csv \
+    --host human \
+    --tgcn human_tgcn.csv \
+    --out results/run \
+    --csv --plots
