@@ -29,3 +29,20 @@ for _, r in df.iterrows():
 PY
 EOF
 
+
+python -c "import pandas; print(pandas.__version__)"
+
+python - <<'PY'
+import pandas as pd
+import subprocess
+
+df = pd.read_excel("human_strictGC_top10.xlsx")
+
+for _, r in df.iterrows():
+    name = f"{r['Name']}_rank{r['Rank']}"
+    subprocess.run(["python", "codon_features.py",
+        "--seq", r["Optimized DNA Sequence"],
+        "--codon-table", "human_codon.csv", "--host", "human",
+        "--tgcn", "human_tgcn.csv", "--out", f"results/{name}",
+        "--csv", "--plots"], check=True)
+PY
