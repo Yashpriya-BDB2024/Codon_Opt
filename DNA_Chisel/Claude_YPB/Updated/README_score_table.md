@@ -1,7 +1,7 @@
 # Score table: DNA Chisel sequences and GeneArt
 
 **Script:** `Sequence_scoring/score_all_sequences.py`
-**Input:** the `Results` sheet of the grid output (`human_grid_1.xlsx`) and the original trials workbook (GeneArt sequences)
+**Input:** the `Results` sheet of the grid output (`human_grid.xlsx`) and the original trials workbook (GeneArt sequences)
 **Output:** `Sequence_scoring/outputs/scores/scores_all.csv` and `scores_all.xlsx`
 
 `codon_features.py` and `codon_compare.py` are imported and not modified. Every value in the table is read from `codon_features.compute_features()['scores']`, so there is one definition of each metric, the same one used by `codon_compare`.
